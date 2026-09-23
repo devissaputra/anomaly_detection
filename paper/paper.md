@@ -1,50 +1,48 @@
-# Novelty / Anomaly Detection on Real Digits: Scientific-Style Technical Report
+# Novelty Detection on Handwritten Digits
 
-**Status:** reproducible portfolio report, not peer reviewed.  
-**Difficulty:** ★★★  
-**Dataset:** Optical Recognition of Handwritten Digits dataset
+## Question
 
-## Abstract
-This project studies a concrete AI Engineering problem using a real public dataset and a fully inspectable pipeline. The project focuses on anomaly detection, novelty detection, Isolation Forest, ROC-AUC. Its central engineering goal is to make data preparation, model fitting, evaluation, and limitations reproducible rather than treating the model as a black box.
+Can an Isolation Forest trained only on digits 1 through 9 identify digit 0 as something unusual?
 
-## 1. Research objective
-Treat one handwritten digit as a held-out novelty class and test Isolation Forest scoring on real images.
+## Data
 
-## 2. Data
-The dataset is **Optical Recognition of Handwritten Digits dataset**. Provenance and the original reference are documented in [`DATA.md`](../DATA.md).
+I use scikit-learn's handwritten digits dataset. Each image is 8 × 8 pixels, giving 64 numerical input features.
 
-## 3. Method
-The implemented pipeline is:
-1. Load real images
-2. Define novelty class
-3. Train on normal classes
-4. Score samples
-5. Threshold audit
+Digit 0 is treated as the novelty class. The train/test split is stratified on that novelty label, and every digit-0 example is removed from the training set.
 
-## 4. Evaluation
-**Primary metric(s):** ROC-AUC / F1.  
-**Validation design:** novel class held out from fit.  
-The experiment saves machine-readable metrics and visual diagnostics so claims can be traced to an executable run.
+## Method
 
-## 5. Results
-Generated metrics:
-```json
-{
-  "roc_auc": 0.8119132957842635,
-  "f1": 0.2926829268292683,
-  "novel_digit": 0,
-  "n_test": 629
-}
+The Isolation Forest uses:
+
+- 350 trees;
+- `contamination=0.10`;
+- `random_state=42`.
+
+I use the negative model score as the anomaly score. ROC-AUC measures how well that score ranks novel examples, while F1 evaluates the model's built-in thresholded decision.
+
+## Results
+
+| Metric | Result |
+|---|---:|
+| ROC-AUC | 0.8119 |
+| F1 | 0.2927 |
+| Test examples | 629 |
+
+## Interpretation
+
+The anomaly score has useful ranking ability, but the thresholded predictions are much weaker.
+
+That difference is the most useful result in this project. Detecting unusual examples is not only about learning a score. The threshold that turns the score into an action also has to be chosen and validated.
+
+## Limitations
+
+The experiment uses only one held-out digit. Isolation Forest also works on flattened pixels, so it does not use the spatial structure of the images.
+
+A stronger version would test every digit as the novelty class, tune the threshold on a validation set, and compare Isolation Forest with One-Class SVM and representation-based methods.
+
+## Reproduce
+
+```bash
+pip install -r requirements.txt
+python src/run_experiment.py
 ```
-
-## 6. Limitations and validity
-Key concern: anomaly-definition dependence. Benchmark performance on one dataset does not imply universal performance. The project is intended to demonstrate research engineering discipline and to provide a base for stronger comparative studies.
-
-## 7. Reproducibility
-Run `python src/run_experiment.py` from the repository root after installing `requirements.txt`.
-
-## 8. Next research extension
-Add repeated cross-validation or temporal/external validation, stronger baselines, hyperparameter sensitivity, confidence intervals, and a domain-specific error analysis.
-
-## References
-- Dataset/reference page: https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html
