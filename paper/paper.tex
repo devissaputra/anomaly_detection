@@ -1,33 +1,36 @@
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
-\usepackage{hyperref}
-\title{Novelty Detection on Handwritten Digits}
+\usepackage{booktabs}
+\title{Novelty Detection and Threshold Calibration}
 \author{Devis W. Saputra}
 \begin{document}
 \maketitle
 
 \begin{abstract}
-I train an Isolation Forest on digits 1 through 9 and treat digit 0 as unseen novelty. The project separates anomaly-score ranking from the final thresholded decision.
+Digit 0 is treated as an unseen class while an Isolation Forest is fitted only on digits 1 through 9. A separate normal-only validation set calibrates thresholds at several false-positive budgets before evaluation on a mixed held-out test set.
 \end{abstract}
 
-\section{Question}
-Can a model trained only on normal digit classes identify digit 0 as unusual?
+\section{Method}
+The normal data are split into 841 model-fitting and 211 threshold-validation examples. The mixed test set contains 629 examples. No digit-0 case is used for fitting or threshold calibration.
 
-\section{Data and Method}
-I use the scikit-learn digits dataset. Digit 0 is removed from the training data. The Isolation Forest uses 350 trees, contamination 0.10, and random state 42.
+\section{Ranking}
+The continuous anomaly score reaches ROC-AUC 0.8071 and Average Precision 0.2458.
 
-\section{Results}
-The recorded test results are 0.8119 ROC-AUC and 0.2927 F1 across 629 held-out examples.
+\section{Operating Points}
+\begin{tabular}{lrrrrr}
+\toprule
+Validation FPR & Test FPR & Precision & Recall & F1 & Bal. Acc. \\
+\midrule
+0.05 & 0.0511 & 0.2750 & 0.1774 & 0.2157 & 0.5631 \\
+0.10 & 0.1129 & 0.2644 & 0.3710 & 0.3087 & 0.6290 \\
+0.15 & 0.1834 & 0.2571 & 0.5806 & 0.3564 & 0.6986 \\
+\bottomrule
+\end{tabular}
 
 \section{Interpretation}
-The continuous anomaly score ranks novel examples reasonably well, but the built-in threshold produces much weaker binary decisions.
+Increasing the tolerated false-positive budget improves novelty recall. Ranking quality and threshold choice are separate engineering decisions, and the operating point should reflect downstream review costs.
 
 \section{Limitations}
-Only one digit is used as the novelty class. A stronger study would test every digit, tune the threshold on validation data, and compare other novelty-detection methods.
+Digit 0 is a benchmark novelty, not a realistic open-world anomaly distribution. Future work should test multiple unseen classes, drift, and external out-of-distribution data.
 
-\section{Reproduction}
-Install \texttt{requirements.txt} and run \texttt{python src/run\_experiment.py}.
-
-\bibliographystyle{plain}
-\bibliography{references}
 \end{document}

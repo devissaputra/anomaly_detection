@@ -1,19 +1,9 @@
-# Portfolio Summary
+# Novelty Detection and Threshold Calibration
 
-## Novelty Detection on Handwritten Digits
+**Focus:** separating anomaly ranking from operating-threshold selection.
 
-I train an Isolation Forest only on digits 1 through 9 and treat digit 0 as unseen novelty.
+I train an Isolation Forest only on digits 1 through 9 and treat digit 0 as unseen novelty. A normal-only validation set is used to calibrate thresholds at 5%, 10%, and 15% false-positive budgets; digit 0 never enters model fitting or threshold selection.
 
-The project shows why anomaly ranking and the final thresholded decision should be evaluated separately.
+The held-out anomaly score reaches ROC-AUC 0.8071 and Average Precision 0.2458. As the false-positive budget rises, recall increases from 0.1774 to 0.5806, making the operational trade-off explicit instead of accepting the estimator's default threshold.
 
-### Images
-
-![Project overview](assets/01_cover.svg)
-
-![Novelty detection pipeline](assets/02_data_pipeline.svg)
-
-![Anomaly score view](assets/03_data_or_model.svg)
-
-![Evaluation summary](assets/04_evaluation_or_results.svg)
-
-**Key result:** ROC-AUC reached 0.8119, while thresholded F1 was only 0.2927.
+The repository includes no-leakage tests, CI, reproducibility documentation, and generated threshold-trade-off diagnostics.

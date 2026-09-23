@@ -1,6 +1,5 @@
 # Quick Description
 
-I treat handwritten digit 0 as an unseen class and train an Isolation Forest only on digits 1 through 9. The project compares the continuous anomaly ranking with the final thresholded novelty decision.
+A novelty-detection experiment that trains only on normal digit classes and calibrates alert thresholds using a separate normal-only validation set. It reports ranking quality plus precision, recall, F1, balanced accuracy, and realized false-positive rate at several operating budgets.
 
-**Dataset:** scikit-learn Digits  
-**Main ideas:** novelty detection, Isolation Forest, anomaly scores, ROC-AUC
+**Main ideas:** Isolation Forest, novelty detection, threshold calibration, ROC-AUC, Average Precision
