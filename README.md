@@ -1,64 +1,69 @@
-# Novelty Detection on Handwritten Digits
+# Novelty Detection and Threshold Calibration
+
+[![CI](https://github.com/devissaputra/anomaly_detection/actions/workflows/ci.yml/badge.svg)](https://github.com/devissaputra/anomaly_detection/actions/workflows/ci.yml)
 
 ![Project overview](assets/01_cover.svg)
 
-I built this project to test a different kind of machine-learning problem: instead of teaching a model all ten digit classes, I ask it to recognise when something looks unlike the data it was trained on.
+A novelty-detection experiment that separates **ranking anomalies** from **choosing an operating threshold**.
 
-Digit `0` is treated as the unseen class. The Isolation Forest is trained only on digits `1` through `9`.
+Digit `0` is treated as an unseen class. The Isolation Forest is fitted only on digits `1-9`.
 
-## Data
+## Why this version is stricter
 
-I use scikit-learn's handwritten digits dataset.
+A common anomaly-detection mistake is to accept the estimator's default threshold and report one F1 score. This project instead creates:
 
-- 1,797 grayscale images
-- image size: 8 × 8
-- 64 pixel features per image
-- digit 0 is the novelty class
+- a normal-only training set;
+- a separate normal-only validation set for threshold calibration;
+- an untouched mixed test set containing normal and novel examples.
 
-The train/test split is stratified on the novelty label. The test set contains 629 examples.
+No digit-0 example is used to fit the model or calibrate the threshold.
 
-More detail is in [DATA.md](DATA.md).
+## Data split
 
-## How the experiment works
+- 1,797 handwritten digit images
+- 64 pixel features
+- digit 0 = novelty class
+- 35% mixed test set
+- remaining normal examples split 80/20 into model-fit and threshold-validation sets
+
+Recorded sizes:
+
+| Partition | Samples |
+|---|---:|
+| Normal training | 841 |
+| Normal validation | 211 |
+| Mixed test | 629 |
+
+## Ranking quality
 
 ![Novelty detection pipeline](assets/02_data_pipeline.svg)
 
-The code:
-
-1. labels digit 0 as novel and all other digits as normal;
-2. creates a 65/35 train/test split;
-3. removes every digit-0 sample from the training set;
-4. fits an Isolation Forest with 350 trees;
-5. uses the model's anomaly score to rank test examples;
-6. evaluates ranking with ROC-AUC and thresholded predictions with F1.
-
-The Isolation Forest uses `contamination=0.10` and `random_state=42`.
-
-## Anomaly scores
-
-![Anomaly score view](assets/03_data_or_model.svg)
-
-Anomaly detection gives me two things to inspect: the ranking produced by the continuous anomaly score, and the final yes/no decision produced by a threshold.
-
-Those two views can tell very different stories.
-
-## Results
-
-![Evaluation summary](assets/04_evaluation_or_results.svg)
-
-The recorded run produced:
+Before applying any threshold, the continuous anomaly score achieves:
 
 | Metric | Result |
 |---|---:|
-| ROC-AUC | 0.8119 |
-| F1 | 0.2927 |
-| Test examples | 629 |
+| ROC-AUC | **0.8071** |
+| Average Precision | **0.2458** |
 
-The ROC-AUC shows that the anomaly score contains useful information. The much lower F1 score shows that the default decision threshold is not well matched to this task.
+This says the score contains useful ranking information, but ranking alone does not tell us where to trigger an alert.
 
-That gap is the main lesson from this project. Ranking anomalies and choosing a practical threshold are separate problems.
+## Threshold calibration
 
-## Run it
+![Anomaly score view](assets/03_data_or_model.svg)
+
+Thresholds are selected from **normal validation scores only**. I evaluate three target false-positive budgets:
+
+| Validation FPR budget | Test FPR | Precision | Recall | F1 | Balanced Acc. |
+|---|---:|---:|---:|---:|---:|
+| 5% | 0.0511 | 0.2750 | 0.1774 | 0.2157 | 0.5631 |
+| 10% | 0.1129 | 0.2644 | 0.3710 | 0.3087 | 0.6290 |
+| 15% | 0.1834 | 0.2571 | 0.5806 | **0.3564** | **0.6986** |
+
+![Evaluation summary](assets/04_evaluation_or_results.svg)
+
+The trade-off is the point: allowing more false positives raises novelty recall substantially. There is no universally correct operating point. The acceptable false-positive budget depends on the downstream cost of review.
+
+## Run
 
 ```bash
 python -m venv .venv
@@ -67,10 +72,15 @@ pip install -r requirements.txt
 python src/run_experiment.py
 ```
 
-On Windows, use `.venv\Scripts\activate`.
+## Test
 
-## Repository notes
+```bash
+pip install pytest
+pytest
+```
 
-- [DATA.md](DATA.md) explains the dataset.
-- [REPRODUCIBILITY.md](REPRODUCIBILITY.md) records the experiment settings.
-- [paper/paper.md](paper/paper.md) contains the longer write-up.
+Tests verify that digit 0 never leaks into fitting or threshold calibration, threshold ordering is sensible, and all reported operating-point metrics are bounded.
+
+## Limitations
+
+Digit 0 is only a convenient benchmark novelty, not a realistic open-world anomaly distribution. A stronger system would evaluate multiple unseen classes, contamination shifts, threshold uncertainty, streaming drift, and out-of-distribution datasets.
