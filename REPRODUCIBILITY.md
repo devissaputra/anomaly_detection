@@ -1,13 +1,18 @@
-# Reproducibility
+# Reproducing the Experiment
 
-This repository uses a single executable entry point: `python src/run_experiment.py`.
+Run:
 
-## Reproduction checklist
-1. Create an isolated Python environment.
-2. Install `requirements.txt`.
-3. Acquire the dataset exactly as documented in `DATA.md`.
-4. Run the experiment from the repository root.
-5. Confirm generated artifacts under `results/` and `assets/`.
-6. Record the Python/package versions if using results in an application or manuscript.
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python src/run_experiment.py
+```
 
-Random seeds are fixed where the underlying library supports them. Data splits and target definitions are declared in code. No metric should be copied into academic material unless it was generated from the stated dataset and configuration.
+The train/test split uses `random_state=42` and is stratified on the novelty label. Digit 0 is excluded from the training data.
+
+The Isolation Forest uses 350 trees, `contamination=0.10`, and `random_state=42`.
+
+The script writes ROC-AUC, F1, the novelty digit, and test-set size to `results/metrics.json`.
+
+Because anomaly thresholds can be sensitive to library changes, record your scikit-learn version if you are comparing exact numbers.
