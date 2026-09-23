@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/devissaputra/anomaly_detection/actions/workflows/ci.yml/badge.svg)](https://github.com/devissaputra/anomaly_detection/actions/workflows/ci.yml)
 
+
+**Category:** AI Engineering
 ![Project overview](assets/01_cover.svg)
 
 A novelty-detection experiment that separates **ranking anomalies** from **choosing an operating threshold**.
