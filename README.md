@@ -81,6 +81,12 @@ pytest
 
 Tests verify that digit 0 never leaks into fitting or threshold calibration, threshold ordering is sensible, and all reported operating-point metrics are bounded.
 
-## Limitations
+## Choosing an operating point
 
-Digit 0 is only a convenient benchmark novelty, not a realistic open-world anomaly distribution. A stronger system would evaluate multiple unseen classes, contamination shifts, threshold uncertainty, streaming drift, and out-of-distribution datasets.
+The most important decision in this repo is not the Isolation Forest itself. It is the threshold. A 5% validation false-positive budget is conservative but misses many novel examples; a 15% budget catches far more novelties at the cost of extra review.
+
+That makes the operating point a product or policy choice, not just a modeling choice. The acceptable false-positive rate depends on what happens after an alert is raised.
+
+## What would make this harder
+
+Digit 0 is a convenient benchmark novelty, not a realistic open-world anomaly. A more demanding study would rotate several unseen classes, introduce contamination and distribution shift, estimate threshold uncertainty, and evaluate the detector under streaming drift.
