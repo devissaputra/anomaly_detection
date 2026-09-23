@@ -1,21 +1,33 @@
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{hyperref}
-\title{05. Novelty / Anomaly Detection on Real Digits}
+\title{Novelty Detection on Handwritten Digits}
 \author{Devis W. Saputra}
 \begin{document}
 \maketitle
+
 \begin{abstract}
-This manuscript source accompanies the reproducible GitHub technical report. Numerical findings should be regenerated from the repository before academic use.
+I train an Isolation Forest on digits 1 through 9 and treat digit 0 as unseen novelty. The project separates anomaly-score ranking from the final thresholded decision.
 \end{abstract}
-\section{Research Objective}
-See the repository README and \texttt{paper/paper.md} for the full research question and rationale.
+
+\section{Question}
+Can a model trained only on normal digit classes identify digit 0 as unusual?
+
 \section{Data and Method}
-The dataset provenance, processing steps, executable method, validation design, and limitations are documented in the repository.
-\section{Reproducibility}
-Install \texttt{requirements.txt} and execute \texttt{python src/run\_experiment.py}.
+I use the scikit-learn digits dataset. Digit 0 is removed from the training data. The Isolation Forest uses 350 trees, contamination 0.10, and random state 42.
+
+\section{Results}
+The recorded test results are 0.8119 ROC-AUC and 0.2927 F1 across 629 held-out examples.
+
+\section{Interpretation}
+The continuous anomaly score ranks novel examples reasonably well, but the built-in threshold produces much weaker binary decisions.
+
 \section{Limitations}
-This is a portfolio research artifact rather than a peer-reviewed publication. External validation and stronger comparative experiments are required for publication claims.
+Only one digit is used as the novelty class. A stronger study would test every digit, tune the threshold on validation data, and compare other novelty-detection methods.
+
+\section{Reproduction}
+Install \texttt{requirements.txt} and run \texttt{python src/run\_experiment.py}.
+
 \bibliographystyle{plain}
 \bibliography{references}
 \end{document}
