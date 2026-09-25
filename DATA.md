@@ -1,26 +1,44 @@
 # Dataset Card — Numenta Anomaly Benchmark
 
 ## Source
+
 Numenta Anomaly Benchmark (NAB)  
 Repository: https://github.com/numenta/NAB  
-Paper: Ahmad et al., *Unsupervised real-time anomaly detection for streaming data*, Neurocomputing (2017), DOI 10.1016/j.neucom.2017.04.070.
+Primary annotation file: \`labels/combined_windows.json\`
 
-## Study subset
-The default experiment uses four files under `data/realKnownCause/`. Their timestamps, values and anomaly-window annotations are fetched directly from the upstream GitHub repository at run time.
+The runner uses the upstream \`master\` branch URLs and records SHA-256 hashes for the annotation JSON and every selected CSV, so the exact bytes used by a result are auditable.
+
+## Frozen study subset
+
+- \`realKnownCause/ambient_temperature_system_failure.csv\`
+- \`realKnownCause/cpu_utilization_asg_misconfiguration.csv\`
+- \`realKnownCause/ec2_request_latency_system_failure.csv\`
+- \`realKnownCause/machine_temperature_system_failure.csv\`
+
+Before freezing the protocol, the split was checked against the official window annotations. All four selected streams have annotated anomaly points in the final 30% chronological test region.
 
 ## Labels
-NAB supplies anomaly windows in `labels/combined_windows.json`. This research bundle expands those windows to point-level labels solely to support transparent ranking and threshold evaluation.
 
-## Split
-Each series is ordered by timestamp and split chronologically:
-- first 50%: candidate model-fit region;
-- next 20%: candidate threshold-validation region;
-- final 30%: untouched test region.
+NAB supplies anomaly windows. The runner expands each window to point labels only for evaluation and for clearly named oracle/sensitivity analyses.
 
-Known anomaly points are excluded from fit and validation sets. The final test segment retains all labels.
+The **primary** Isolation Forest fit includes every point in the first 50%, regardless of its annotation. The **primary** threshold is the requested quantile of all scores in the next 20%, without removing annotated points.
 
-## Leakage boundary
-Features are causal rolling features computed from present/past values only. Future values are not used to form a feature row.
+## Chronological split
+
+- first 50%: label-blind model fit;
+- next 20%: label-blind threshold calibration;
+- final 30%: untouched evaluation.
+
+This fixed chronology avoids random mixing of future and past observations.
+
+## Causal feature boundary
+
+Feature rows contain the current value, first difference, lag-1 value, and rolling mean/std calculated from **prior observations**. Future samples are never used to construct a feature row.
+
+## Cache and provenance
+
+Downloaded files are cached under \`data/cache/\`, which is gitignored. Generated results record hashes instead of committing raw upstream data.
 
 ## Limitations
-Benchmark windows are annotations, not universal definitions of operational failure. Time-series dependence also means ordinary iid interpretations of metrics are inappropriate.
+
+NAB windows are benchmark annotations rather than ground truth for every possible operational definition of failure. The selected series are heterogeneous, temporally dependent, and too small a subset to establish general production performance.
