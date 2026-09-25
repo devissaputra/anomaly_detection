@@ -1,6 +1,6 @@
 {
   "research_bundle": true,
-  "status": "regenerate_required",
-  "message": "Run src/run_experiment.py to generate metrics from the current NAB real-data protocol. Metrics from the retired digit benchmark were removed.",
-  "dataset": "Numenta Anomaly Benchmark"
+  "status": "regeneration_required_after_protocol_upgrade",
+  "dataset": "Numenta Anomaly Benchmark",
+  "message": "Run src/run_experiment.py using the current label-blind NAB protocol. Retired digit metrics and earlier label-cleaned results are not valid evidence."
 }
