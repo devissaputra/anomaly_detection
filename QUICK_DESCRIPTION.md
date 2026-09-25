@@ -1,5 +1,3 @@
-# Quick Description
+# Streaming Anomaly Detection Research Bundle
 
-A novelty-detection experiment that trains only on normal digit classes and calibrates alert thresholds using a separate normal-only validation set. It reports ranking quality plus precision, recall, F1, balanced accuracy, and realized false-positive rate at several operating budgets.
-
-**Main ideas:** Isolation Forest, novelty detection, threshold calibration, ROC-AUC, Average Precision
+Real-data AI Engineering research bundle using selected Numenta Anomaly Benchmark operational time series. The study keeps model fitting, threshold calibration and final chronological evaluation separate and reports both ranking quality and explicit alert-budget operating points.

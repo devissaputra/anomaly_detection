@@ -1,19 +1,19 @@
-# Novelty Detection and Threshold Calibration
+# Threshold-Aware Unsupervised Anomaly Detection on Real Operational Time Series
 
-## Abstract
+## Status
+Research-bundle manuscript scaffold. Results are generated from the current NAB runner and are not hard-coded before execution.
 
-This project treats digit 0 from the scikit-learn handwritten-digits benchmark as an unseen class. Isolation Forest is fitted only on digits 1 through 9. A separate normal-only validation set calibrates operating thresholds at several false-positive budgets, and a mixed held-out test set evaluates both ranking and thresholded decisions.
+## Question
+How well does an Isolation Forest rank labeled anomalies and support explicit false-positive budgets when fitting, threshold calibration and final evaluation are chronologically separated?
+
+## Data
+Selected `realKnownCause` streams from the Numenta Anomaly Benchmark.
 
 ## Method
+Causal rolling features feed an Isolation Forest. Model fitting uses a normal-only early segment; threshold calibration uses a separate normal-only segment; the final chronological segment is untouched until evaluation.
 
-The mixed test set contains 629 examples. The remaining normal examples are divided into 841 training and 211 validation cases. No digit-0 observation is used for fitting or threshold calibration.
+## Metrics
+ROC-AUC and average precision assess ranking. Precision, recall, F1, balanced accuracy and realized false-positive rate assess explicit threshold policies.
 
-The continuous anomaly score reaches ROC-AUC 0.8071 and Average Precision 0.2458. Thresholds are selected from normal validation-score quantiles corresponding to nominal false-positive budgets of 5%, 10%, and 15%.
-
-## Interpretation
-
-Higher false-positive budgets increase novelty recall and F1 in this run, illustrating that ranking quality and operating-point selection are separate engineering decisions. There is no universally optimal threshold without a downstream cost model.
-
-## Limitations
-
-Digit 0 is a convenient benchmark novelty rather than a realistic open-world anomaly distribution. External out-of-distribution datasets, temporal drift, repeated splits, and uncertainty around thresholds are natural extensions.
+## Threats to validity
+NAB windows are benchmark annotations. Point metrics can reward or penalize detections differently from event-level scoring. Results on these selected streams do not establish production transfer.

@@ -1,16 +1,24 @@
-# Reproducing the experiment
+# Reproducibility
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+pytest -q
 python src/run_experiment.py
 ```
 
-Seed 42 controls the mixed hold-out split, the normal-only train/validation split, and Isolation Forest.
+## Frozen defaults
+- NAB upstream branch: master
+- four named `realKnownCause` streams
+- chronological fractions: 0.50 fit / 0.20 validation / 0.30 test
+- rolling window: 12 observations
+- Isolation Forest estimators: 350
+- seed: 42
+- threshold validation FPR budgets: 0.05, 0.10, 0.15
 
-Digit 0 is excluded from both model fitting and threshold calibration. Thresholds are selected only from normal validation scores at nominal false-positive budgets of 5%, 10%, and 15%, then frozen before evaluation on the mixed test set.
+## Network boundary
+Tests operate on local fixtures and helper functions. The empirical runner requires internet access to the official NAB repository.
 
-Outputs are written to `results/metrics.json` and `results/figures/`.
-
-Run `pytest` to verify the no-leakage split and threshold behaviour. GitHub Actions runs those tests automatically.
+## Result integrity
+Metrics from the retired handwritten-digits demonstration are not valid research-bundle evidence and have been removed from the results manifest.

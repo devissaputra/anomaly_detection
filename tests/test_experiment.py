@@ -1,38 +1,31 @@
 from pathlib import Path
+import numpy as np
 
-from src.run_experiment import (
-    FALSE_POSITIVE_BUDGETS,
-    make_splits,
-    run_experiment,
-)
+from src.run_experiment import causal_features, point_labels, temporal_partitions, threshold_from_normal_scores
 
-
-def test_novel_digit_never_enters_fit_or_validation():
-    _, novelty, train_idx, validation_idx, _ = make_splits()
-    assert novelty[train_idx].sum() == 0
-    assert novelty[validation_idx].sum() == 0
-
-
-def test_thresholds_decrease_as_false_positive_budget_increases(tmp_path):
-    result = run_experiment(tmp_path, make_plots=False)
-    thresholds = [
-        result["operating_points"][f"{budget:.2f}"]["threshold"]
-        for budget in FALSE_POSITIVE_BUDGETS
-    ]
-    assert thresholds == sorted(thresholds, reverse=True)
-
-
-def test_metrics_are_bounded(tmp_path):
-    result = run_experiment(tmp_path, make_plots=False)
-    assert 0.0 <= result["ranking"]["roc_auc"] <= 1.0
-    assert 0.0 <= result["ranking"]["average_precision"] <= 1.0
-    for point in result["operating_points"].values():
-        for key in ["test_fpr", "precision", "recall", "f1", "balanced_accuracy"]:
-            assert 0.0 <= point[key] <= 1.0
-
-
-def test_repository_structure():
+def test_repository_is_research_bundle():
     root = Path(__file__).resolve().parents[1]
-    assert (root / ".github/workflows/ci.yml").exists()
-    assert (root / "src/run_experiment.py").exists()
-    assert (root / "paper/paper.md").exists()
+    for path in ["README.md","RESEARCH_BUNDLE.md","DATA.md","REPRODUCIBILITY.md",
+                 "src/run_experiment.py","paper/paper.md",".github/workflows/ci.yml"]:
+        assert (root / path).exists(), path
+
+def test_temporal_partitions_are_ordered_and_disjoint():
+    a, b, c = temporal_partitions(100)
+    assert a[-1] < b[0] < b[-1] < c[0]
+    assert len(set(a) | set(b) | set(c)) == 100
+
+def test_features_are_causal_prefix_statistics():
+    X = causal_features([1,2,3], window=2)
+    assert X.loc[1, "rolling_mean"] == 1.5
+    assert X.loc[2, "rolling_mean"] == 2.5
+
+def test_window_to_point_labels():
+    stamps = ["2020-01-01","2020-01-02","2020-01-03"]
+    y = point_labels(stamps, [["2020-01-02","2020-01-02"]])
+    assert y.tolist() == [0,1,0]
+
+def test_threshold_budget_ordering():
+    scores = np.arange(100, dtype=float)
+    t05 = threshold_from_normal_scores(scores, .05)
+    t15 = threshold_from_normal_scores(scores, .15)
+    assert t05 > t15

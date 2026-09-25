@@ -1,69 +1,44 @@
-# Novelty Detection and Threshold Calibration
+# Streaming Anomaly Detection Research Bundle
 
 [![CI](https://github.com/devissaputra/anomaly_detection/actions/workflows/ci.yml/badge.svg)](https://github.com/devissaputra/anomaly_detection/actions/workflows/ci.yml)
 
+**Research Bundle · AI Engineering · real-world time-series anomaly detection**
 
-**Category:** AI Engineering
-![Project overview](assets/01_cover.svg)
+This repository is an empirical anomaly-detection study built on the **Numenta Anomaly Benchmark (NAB)**. The earlier handwritten-digit novelty demonstration has been retired from the research narrative.
 
-A novelty-detection experiment that separates **ranking anomalies** from **choosing an operating threshold**.
+## Research question
 
-Digit `0` is treated as an unseen class. The Isolation Forest is fitted only on digits `1-9`.
+> How well does an unsupervised Isolation Forest rank and detect labeled anomalies in real operational time series when its alert threshold is calibrated only from a normal validation segment?
 
-## Why this version is stricter
+The central methodological issue is the separation of **anomaly ranking** from **operating-threshold selection**.
 
-A common anomaly-detection mistake is to accept the estimator's default threshold and report one F1 score. This project instead creates:
+## Real dataset
 
-- a normal-only training set;
-- a separate normal-only validation set for threshold calibration;
-- an untouched mixed test set containing normal and novel examples.
+The default study downloads selected real-world series and the official anomaly windows from the public NAB repository.
 
-No digit-0 example is used to fit the model or calibrate the threshold.
+Default series:
 
-## Data split
+- `realKnownCause/ambient_temperature_system_failure.csv`
+- `realKnownCause/cpu_utilization_asg_misconfiguration.csv`
+- `realKnownCause/ec2_request_latency_system_failure.csv`
+- `realKnownCause/machine_temperature_system_failure.csv`
 
-- 1,797 handwritten digit images
-- 64 pixel features
-- digit 0 = novelty class
-- 35% mixed test set
-- remaining normal examples split 80/20 into model-fit and threshold-validation sets
+NAB contains labeled streaming time series from operational domains. Dataset and benchmark terms remain those of the upstream NAB project.
 
-Recorded sizes:
+## Frozen study design
 
-| Partition | Samples |
-|---|---:|
-| Normal training | 841 |
-| Normal validation | 211 |
-| Mixed test | 629 |
+For each series:
 
-## Ranking quality
+1. Download the timestamp/value stream and official NAB anomaly windows.
+2. Convert windows to point labels only for evaluation.
+3. Build causal features from present/past values: level, first difference, rolling mean and rolling standard deviation.
+4. Use the first 50% of the stream as the model-fit region, excluding labeled anomaly points.
+5. Use the next 20% as a threshold-calibration region, again using only labeled-normal points for calibration.
+6. Evaluate ranking and operating points on the final 30% chronological holdout.
+7. Calibrate thresholds for 5%, 10% and 15% validation false-positive budgets.
+8. Report ROC-AUC, average precision, test FPR, precision, recall, F1 and balanced accuracy.
 
-![Novelty detection pipeline](assets/02_data_pipeline.svg)
-
-Before applying any threshold, the continuous anomaly score achieves:
-
-| Metric | Result |
-|---|---:|
-| ROC-AUC | **0.8071** |
-| Average Precision | **0.2458** |
-
-This says the score contains useful ranking information, but ranking alone does not tell us where to trigger an alert.
-
-## Threshold calibration
-
-![Anomaly score view](assets/03_data_or_model.svg)
-
-Thresholds are selected from **normal validation scores only**. I evaluate three target false-positive budgets:
-
-| Validation FPR budget | Test FPR | Precision | Recall | F1 | Balanced Acc. |
-|---|---:|---:|---:|---:|---:|
-| 5% | 0.0511 | 0.2750 | 0.1774 | 0.2157 | 0.5631 |
-| 10% | 0.1129 | 0.2644 | 0.3710 | 0.3087 | 0.6290 |
-| 15% | 0.1834 | 0.2571 | 0.5806 | **0.3564** | **0.6986** |
-
-![Evaluation summary](assets/04_evaluation_or_results.svg)
-
-The trade-off is the point: allowing more false positives raises novelty recall substantially. There is no universally correct operating point. The acceptable false-positive budget depends on the downstream cost of review.
+The labels are never used as model targets. They are used to construct clean benchmark fit/calibration regions and to score the final holdout.
 
 ## Run
 
@@ -74,21 +49,31 @@ pip install -r requirements.txt
 python src/run_experiment.py
 ```
 
-## Test
+The runner writes one aggregate JSON report under `results/metrics.json`.
 
-```bash
-pip install pytest
-pytest
+## Research-bundle requirements
+
+See [RESEARCH_BUNDLE.md](RESEARCH_BUNDLE.md). A professor can trace the project from dataset provenance through temporal split, threshold policy, code, tests and threats to validity.
+
+## Why threshold policy matters
+
+A detector can rank abnormal points well while still being unusable at a particular alert budget. This bundle therefore refuses to present one default threshold as universally correct. Operating points are explicit policy choices.
+
+## Interpretation boundary
+
+NAB labels are benchmark annotations, not proof that the same detector will transfer to a production system. The selected series are heterogeneous, and point-wise metrics do not fully capture alert timeliness or operational cost. This study is a benchmark of a transparent method, not a production monitoring certification.
+
+## Repository map
+
+```text
+README.md
+RESEARCH_BUNDLE.md
+DATA.md
+REPRODUCIBILITY.md
+ETHICS.md
+src/run_experiment.py
+tests/
+results/
+paper/
+CITATION.cff
 ```
-
-Tests verify that digit 0 never leaks into fitting or threshold calibration, threshold ordering is sensible, and all reported operating-point metrics are bounded.
-
-## Choosing an operating point
-
-The most important decision in this repo is not the Isolation Forest itself. It is the threshold. A 5% validation false-positive budget is conservative but misses many novel examples; a 15% budget catches far more novelties at the cost of extra review.
-
-That makes the operating point a product or policy choice, not just a modeling choice. The acceptable false-positive rate depends on what happens after an alert is raised.
-
-## What would make this harder
-
-Digit 0 is a convenient benchmark novelty, not a realistic open-world anomaly. A more demanding study would rotate several unseen classes, introduce contamination and distribution shift, estimate threshold uncertainty, and evaluate the detector under streaming drift.
