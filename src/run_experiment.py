@@ -7,6 +7,7 @@ import platform
 from pathlib import Path
 from urllib.request import urlopen
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -23,14 +24,24 @@ from sklearn.metrics import (
 
 PRIMARY_SEED = 42
 REPEATED_SEEDS = (13, 29, 42, 73, 101)
-BASE = "https://raw.githubusercontent.com/numenta/NAB/master"
+NAB_REVISION = "ea702d75cc2258d9d7dd35ca8e5e2539d71f3140"
+BASE = f"https://raw.githubusercontent.com/numenta/NAB/{NAB_REVISION}"
 UPSTREAM = "https://github.com/numenta/NAB"
+NAB_DOI = "10.5281/zenodo.1040335"
+NAB_LICENSE = "MIT"
+EXPECTED_WINDOWS_SHA256 = "1e1fbc4601321aad8d0f8b3784c8134299379f68f6c1f7777565f8ffd57ab6b1"
 SERIES = (
     "realKnownCause/ambient_temperature_system_failure.csv",
     "realKnownCause/cpu_utilization_asg_misconfiguration.csv",
     "realKnownCause/ec2_request_latency_system_failure.csv",
     "realKnownCause/machine_temperature_system_failure.csv",
 )
+EXPECTED_SERIES_SHA256 = {
+    "realKnownCause/ambient_temperature_system_failure.csv": "230b68ccca20f59d562afd5d24ad52939c9b784386bed0054018358bf9120581",
+    "realKnownCause/cpu_utilization_asg_misconfiguration.csv": "58ba65dc0737cfbac11b51514476d50c438d44011232144bb8d93f392df58f9f",
+    "realKnownCause/ec2_request_latency_system_failure.csv": "98378580aa80157e057c61d59d81daddccc6c65a2c0c800e3f01f603b8215c3f",
+    "realKnownCause/machine_temperature_system_failure.csv": "92bf5b87fc7f9bba8ca0b7ec63ccaac8cb4a1371a258e8c29a10ae9c018d82a4",
+}
 FALSE_POSITIVE_BUDGETS = (0.05, 0.10, 0.15)
 ROLLING_WINDOW = 12
 N_ESTIMATORS = 200
@@ -41,14 +52,25 @@ def _download_bytes(url: str) -> bytes:
         return response.read()
 
 
+def validate_source_hash(name: str, payload: bytes, expected_sha256: str) -> str:
+    actual = hashlib.sha256(payload).hexdigest()
+    if actual != expected_sha256:
+        raise ValueError(
+            f"Unexpected SHA-256 for {name}: {actual}; expected {expected_sha256}. "
+            "The frozen research protocol requires the exact validated NAB bytes."
+        )
+    return actual
+
+
 def load_windows(cache_dir: str | Path = "data/cache") -> tuple[dict, str]:
     cache = Path(cache_dir)
     cache.mkdir(parents=True, exist_ok=True)
     path = cache / "combined_windows.json"
     payload = path.read_bytes() if path.exists() else _download_bytes(f"{BASE}/labels/combined_windows.json")
+    windows_sha = validate_source_hash("labels/combined_windows.json", payload, EXPECTED_WINDOWS_SHA256)
     if not path.exists():
         path.write_bytes(payload)
-    return json.loads(payload.decode("utf-8")), hashlib.sha256(payload).hexdigest()
+    return json.loads(payload.decode("utf-8")), windows_sha
 
 
 def load_series(path: str, cache_dir: str | Path = "data/cache") -> tuple[pd.DataFrame, str]:
@@ -56,13 +78,14 @@ def load_series(path: str, cache_dir: str | Path = "data/cache") -> tuple[pd.Dat
     cache.mkdir(parents=True, exist_ok=True)
     local = cache / Path(path).name
     payload = local.read_bytes() if local.exists() else _download_bytes(f"{BASE}/data/{path}")
+    series_sha = validate_source_hash(path, payload, EXPECTED_SERIES_SHA256[path])
     if not local.exists():
         local.write_bytes(payload)
     frame = pd.read_csv(pd.io.common.BytesIO(payload))
     frame["timestamp"] = pd.to_datetime(frame["timestamp"], utc=True)
     frame["value"] = pd.to_numeric(frame["value"], errors="raise")
     frame = frame.sort_values("timestamp").reset_index(drop=True)
-    return frame, hashlib.sha256(payload).hexdigest()
+    return frame, series_sha
 
 
 def point_labels(timestamps, windows) -> np.ndarray:
@@ -89,7 +112,9 @@ def causal_features(values, window: int = ROLLING_WINDOW) -> pd.DataFrame:
         "history_mean": history_mean,
         "history_std": history_std,
     })
-    return frame.replace([np.inf, -np.inf], np.nan).ffill().bfill().fillna(0.0)
+    # Missing warm-up values are filled with a fixed neutral value. Never back-fill:
+    # back-filling would import information from future timestamps into earlier rows.
+    return frame.replace([np.inf, -np.inf], np.nan).fillna(0.0)
 
 
 def robust_history_score(values, window: int = ROLLING_WINDOW) -> np.ndarray:
@@ -100,8 +125,12 @@ def robust_history_score(values, window: int = ROLLING_WINDOW) -> np.ndarray:
         lambda x: float(np.median(np.abs(x - np.median(x)))), raw=True
     )
     scale = 1.4826 * mad
-    score = (s - med).abs() / scale.replace(0, np.nan)
-    return score.replace([np.inf, -np.inf], np.nan).ffill().bfill().fillna(0.0).to_numpy(float)
+    # A causal scale floor keeps constant-history windows numerically defined without
+    # borrowing any future observation. Warm-up rows remain neutral at score zero.
+    scale_floor = 1e-6 * med.abs().clip(lower=1.0)
+    scale = scale.where(scale > scale_floor, scale_floor)
+    score = (s - med).abs() / scale
+    return score.replace([np.inf, -np.inf], np.nan).fillna(0.0).to_numpy(float)
 
 
 def temporal_partitions(n: int):
@@ -350,6 +379,51 @@ def _strip_plot(result: dict) -> dict:
     return {k: v for k, v in result.items() if k != "plot"}
 
 
+def build_results_latex(results: dict) -> str:
+    bs = "\\"
+    row_end = bs + bs
+    names = {
+        "realKnownCause/ambient_temperature_system_failure.csv": "Ambient temperature",
+        "realKnownCause/cpu_utilization_asg_misconfiguration.csv": "CPU utilization",
+        "realKnownCause/ec2_request_latency_system_failure.csv": "EC2 request latency",
+        "realKnownCause/machine_temperature_system_failure.csv": "Machine temperature",
+    }
+    lines = [
+        f"{bs}section{{Generated empirical results}}",
+        "This section is generated by \\texttt{src/run\_experiment.py}; numerical values should not be hand-edited.",
+        "",
+        f"NAB revision: \\texttt{{{results['dataset']['revision']}}}.",
+        "",
+        f"{bs}begin{{table}}[htbp]",
+        f"{bs}centering",
+        f"{bs}small",
+        f"{bs}begin{{tabular}}{{lrrrrrr}}",
+        f"{bs}toprule",
+        "Series & IF AUC & IF AP & Robust AUC & Robust AP & IF F1 & Test FPR " + row_end,
+        f"{bs}midrule",
+    ]
+    for series, row in results["primary"].items():
+        ir = row["isolation_forest"]["ranking"]
+        rr = row["robust_history_z"]["ranking"]
+        op = row["isolation_forest"]["operating_points"]["label_blind"]["0.05"]
+        lines.append(
+            f"{names.get(series, series)} & {ir['roc_auc']:.4f} & {ir['average_precision']:.4f} & "
+            f"{rr['roc_auc']:.4f} & {rr['average_precision']:.4f} & {op['f1']:.4f} & {op['test_fpr']:.4f} " + row_end
+        )
+    lines += [
+        f"{bs}bottomrule",
+        f"{bs}end{{tabular}}",
+        f"{bs}caption{{Primary-seed results. Isolation Forest F1 and test false-positive rate use the 5\% label-blind validation alert-budget threshold.}}",
+        f"{bs}label{{tab:primary-results}}",
+        f"{bs}end{{table}}",
+        "",
+        f"{bs}paragraph{{Interpretation.}}",
+        "Performance varies substantially by stream. The label-blind validation alert budget does not guarantee the same false-positive rate after temporal shift, so realized test false-positive rates are reported explicitly.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def run_experiment(results_dir: str | Path = "results", quick: bool = False):
     windows, windows_sha = load_windows()
     seeds = (PRIMARY_SEED,) if quick else REPEATED_SEEDS
@@ -374,9 +448,14 @@ def run_experiment(results_dir: str | Path = "results", quick: bool = False):
         "dataset": {
             "name": "Numenta Anomaly Benchmark",
             "upstream": UPSTREAM,
-            "branch": "master",
+            "revision": NAB_REVISION,
+            "doi": NAB_DOI,
+            "license": NAB_LICENSE,
             "combined_windows_sha256": windows_sha,
             "series": list(SERIES),
+            "series_sha256": {
+                path: primary[path]["data_sha256"] for path in SERIES
+            },
         },
         "protocol": {
             "fit_fraction": 0.50,
@@ -398,6 +477,7 @@ def run_experiment(results_dir: str | Path = "results", quick: bool = False):
             "numpy": np.__version__,
             "pandas": pd.__version__,
             "scikit_learn": sklearn.__version__,
+            "matplotlib": matplotlib.__version__,
         },
     }
 
@@ -412,6 +492,7 @@ def run_experiment(results_dir: str | Path = "results", quick: bool = False):
         "# Results\n\n" + (out / "summary.md").read_text(encoding="utf-8").replace("# Empirical Results Summary\n\n", "", 1),
         encoding="utf-8",
     )
+    Path("paper/results.tex").write_text(build_results_latex(results), encoding="utf-8")
     return results
 
 

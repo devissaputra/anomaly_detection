@@ -1,10 +1,12 @@
 from pathlib import Path
+import hashlib
 
 import numpy as np
 import pandas as pd
 import pytest
 
 from src.run_experiment import (
+    EXPECTED_WINDOWS_SHA256,
     causal_features,
     event_metrics,
     operating_metrics,
@@ -12,6 +14,7 @@ from src.run_experiment import (
     robust_history_score,
     temporal_partitions,
     threshold_from_scores,
+    validate_source_hash,
 )
 
 
@@ -73,3 +76,23 @@ def test_event_metrics_detects_one_window():
     assert m["events_in_test"] == 1
     assert m["events_detected"] == 1
     assert m["median_delay_seconds"] == 0
+
+
+def test_causal_features_do_not_backfill_from_future():
+    a = causal_features([1.0, 2.0, 3.0, 4.0], window=3)
+    b = causal_features([1.0, 2.0, 3.0, 999.0], window=3)
+    pd.testing.assert_frame_equal(a.iloc[:3], b.iloc[:3])
+
+
+def test_robust_history_score_does_not_use_future_tail():
+    a = robust_history_score([1.0, 1.1, 0.9, 1.0, 1.1, 8.0], window=4)
+    b = robust_history_score([1.0, 1.1, 0.9, 1.0, 1.1, -50.0], window=4)
+    assert np.allclose(a[:5], b[:5])
+
+
+def test_frozen_source_hash_guard():
+    payload = b"nab-fixture"
+    expected = hashlib.sha256(payload).hexdigest()
+    assert validate_source_hash("fixture", payload, expected) == expected
+    with pytest.raises(ValueError, match="Unexpected SHA-256"):
+        validate_source_hash("fixture", payload, EXPECTED_WINDOWS_SHA256)

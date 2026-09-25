@@ -1,14 +1,53 @@
-\documentclass{article}
-\title{Threshold-Aware Unsupervised Anomaly Detection on Real Operational Time Series}
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{microtype}
+
+\title{Label-Blind Threshold-Aware Anomaly Detection on Operational Time Series}
 \author{Devis Wawan Saputra}
+\date{}
+
 \begin{document}
 \maketitle
+
+\begin{abstract}
+Unsupervised anomaly-detection evaluations can inadvertently use benchmark annotations during model fitting or threshold selection. This study separates model fitting, alert-budget calibration, and final evaluation on four real-world streams from the Numenta Anomaly Benchmark (NAB). Isolation Forest is compared with a transparent robust-history detector under a chronological, label-blind primary protocol. The bundle additionally reports repeated-seed sensitivity, history-window sensitivity, annotation-access ablations, point-level metrics, and event-level detection and delay.
+\end{abstract}
+
+\section{Research question}
+How well do Isolation Forest and a robust prior-history detector identify NAB anomaly windows when fitting and primary alert-threshold calibration remain label-blind and all final evaluation occurs on a later chronological holdout?
+
+\section{Background}
+NAB was designed for real-time anomaly-detection evaluation with labeled anomaly windows and timing-aware scoring \cite{ahmad2017nab}. Isolation Forest detects anomalies by their tendency to require shorter random partition paths than ordinary observations \cite{liu2008isolation}. This repository does not attempt to reproduce the official NAB leaderboard score; instead it studies ranking quality, explicit alert budgets, realized false alarms, and event detection under a transparent chronological protocol.
+
 \section{Data}
-We use selected realKnownCause streams from the Numenta Anomaly Benchmark.
-\section{Design}
-Model fitting, threshold calibration, and final chronological evaluation are separated.
-\section{Evaluation}
-We report ranking metrics and operating-point metrics for explicit validation false-positive budgets.
-\section{Validity}
-The experiment is a benchmark study and not a production monitoring certification.
+The empirical runner uses four \texttt{realKnownCause} streams and the official \texttt{combined\_windows.json} annotations from NAB. The upstream source is pinned to an exact Git revision and every selected CSV plus the annotation file is checked against a frozen SHA-256 before analysis. Raw source files are cached locally but not committed.
+
+\section{Methods}
+\subsection{Chronological protocol}
+The first 50\% of each ordered stream is used for label-blind model fitting, the next 20\% for label-blind alert-threshold calibration, and the final 30\% for evaluation.
+
+\subsection{Features and detectors}
+Isolation Forest receives the current value, first difference, one-step lag, and rolling mean and standard deviation computed strictly from prior observations. Warm-up values use fixed neutral fills; no backward filling from future timestamps is permitted. The transparent baseline scores deviation from a prior rolling median scaled by prior median absolute deviation with a small causal numerical floor.
+
+\subsection{Threshold policy}
+Primary thresholds are validation-score quantiles corresponding to 5\%, 10\%, and 15\% validation alert budgets. These are alert budgets rather than guaranteed future false-positive rates because validation labels are deliberately ignored. A label-informed normal-only threshold is retained only as an oracle sensitivity analysis.
+
+\subsection{Evaluation and robustness}
+Ranking is evaluated with ROC-AUC and average precision. Operating points report precision, recall, F1, balanced accuracy, alert counts, false alarms, missed anomaly points, and realized test false-positive rates. Event evaluation records test-intersecting windows detected and delay to first alert. Isolation Forest uses five fixed random seeds, and history windows of 6, 12, and 24 observations are compared.
+
+\input{results.tex}
+
+\section{Threats to validity}
+NAB anomaly windows are benchmark annotations rather than universal operational truth. The selected four streams are heterogeneous and do not represent all monitoring domains. Repeated random seeds reuse the same series and are not independent replications. The study also does not reproduce NAB's official scoring profile, so its metrics should not be compared directly with NAB leaderboard scores.
+
+\section{Responsible-use boundary}
+An anomaly score does not establish failure cause, harm, fraud, or safety impact. Production monitoring would require domain-specific alert costs, drift management, event deduplication, escalation rules, and human review.
+
+\section{Reproducibility}
+The executable protocol is \texttt{src/run\_experiment.py}. The exact upstream revision and source hashes are recorded in \texttt{results/metrics.json}; generated prose and LaTeX results are produced by the same runner.
+
+\bibliographystyle{plain}
+\bibliography{references}
 \end{document}
