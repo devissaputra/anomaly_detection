@@ -1,16 +1,19 @@
 cff-version: 1.2.0
-message: "If you use this repository, please cite the repository and the original NAB source."
-title: "Label-Blind Streaming Anomaly Detection on the Numenta Anomaly Benchmark"
+message: "If you use this research bundle, please cite the repository and the Numenta Anomaly Benchmark."
+title: "Label-Blind Threshold-Aware Anomaly Detection on Operational Time Series"
 type: software
 authors:
   - family-names: "Saputra"
-    given-names: "Devis W."
-version: 2.0.0
+    given-names: "Devis Wawan"
+version: 2.1.0
+date-released: 2026-09-25
 license: MIT
 repository-code: "https://github.com/devissaputra/anomaly_detection"
 keywords:
   - anomaly detection
-  - streaming
+  - time series
   - isolation forest
   - Numenta Anomaly Benchmark
-  - reproducibility
+  - reproducible research
+  - threshold calibration
+  - AI Engineering

@@ -1,88 +1,79 @@
-# Label-Blind Streaming Anomaly Detection on NAB
+# Label-Blind Threshold-Aware Anomaly Detection on NAB
 
 [![CI](https://github.com/devissaputra/anomaly_detection/actions/workflows/ci.yml/badge.svg)](https://github.com/devissaputra/anomaly_detection/actions/workflows/ci.yml)
 [![Empirical Study](https://github.com/devissaputra/anomaly_detection/actions/workflows/empirical.yml/badge.svg)](https://github.com/devissaputra/anomaly_detection/actions/workflows/empirical.yml)
 
 **Research Bundle · AI Engineering · time-series anomaly detection**
 
-This repository is a reproducible empirical study on selected **Numenta Anomaly Benchmark (NAB)** real-world streams. Its primary protocol is deliberately label-blind: NAB annotations are not used to fit Isolation Forest or to choose the primary alert threshold. Labels are reserved for final evaluation. Annotation-cleaned alternatives are reported only as oracle sensitivity analyses.
+This repository is a reproducible empirical study on four real-world streams from the **Numenta Anomaly Benchmark (NAB)**. The primary protocol is deliberately label-blind: NAB annotations are not used to fit Isolation Forest or to choose the primary alert threshold. Labels are reserved for evaluation. Annotation-cleaned fitting and normal-only threshold calibration are retained only as clearly named oracle sensitivity analyses.
 
 ## Research question
 
-> How well do a multivariate Isolation Forest detector and a transparent robust-history baseline rank and detect NAB anomaly events when model fitting, threshold calibration and final evaluation are chronologically separated and primary training is label-blind?
+> How well do a feature-based Isolation Forest detector and a transparent robust-history baseline rank and detect NAB anomaly events when fitting, alert-budget calibration and final evaluation are chronologically separated and the primary pipeline remains label-blind?
 
-The study separates three questions that are often mixed together: anomaly ranking, alert-budget threshold selection, and event detection/timeliness.
+## Frozen external data
 
-## Real data
+The study uses:
 
-The frozen default subset is:
+- `realKnownCause/ambient_temperature_system_failure.csv`
+- `realKnownCause/cpu_utilization_asg_misconfiguration.csv`
+- `realKnownCause/ec2_request_latency_system_failure.csv`
+- `realKnownCause/machine_temperature_system_failure.csv`
+- `labels/combined_windows.json`
 
-- \`realKnownCause/ambient_temperature_system_failure.csv\`
-- \`realKnownCause/cpu_utilization_asg_misconfiguration.csv\`
-- \`realKnownCause/ec2_request_latency_system_failure.csv\`
-- \`realKnownCause/machine_temperature_system_failure.csv\`
-
-The runner fetches the streams and \`labels/combined_windows.json\` from the upstream NAB repository, caches them outside version control, and records SHA-256 hashes of the source files used.
+The executable source is pinned to NAB Git revision `ea702d75cc2258d9d7dd35ca8e5e2539d71f3140`, not mutable `master`. Every selected CSV and the annotation file are checked against frozen SHA-256 values before analysis. NAB identifies the benchmark as version 1.1 and provides DOI `10.5281/zenodo.1040335`; the pinned repository revision uses the MIT license.
 
 ## Primary design
 
 For every series:
 
 1. Order observations by timestamp.
-2. Construct causal features from the current value and **prior-history** lags/rolling statistics.
-3. Use the first 50% as label-blind model-fit data.
-4. Use the next 20% for label-blind threshold calibration.
-5. Evaluate only on the final 30% chronological holdout.
-6. Compare Isolation Forest with a transparent robust historical-deviation score.
-7. Report alert-budget operating points for 5%, 10% and 15% validation alert rates.
-8. Report point-level ROC-AUC/AP and precision/recall/F1/balanced accuracy.
-9. Report event-level recall and detection delay for NAB windows intersecting the test period.
+2. Construct features from the current observation plus strictly prior-history lag and rolling statistics.
+3. Fill warm-up history with fixed neutral values only; never backward-fill from future timestamps.
+4. Use the first 50% as label-blind model-fit data.
+5. Use the next 20% for label-blind threshold calibration.
+6. Evaluate only on the final 30% chronological holdout.
+7. Compare Isolation Forest with a transparent rolling median/MAD historical-deviation baseline.
+8. Report 5%, 10% and 15% **validation alert-budget** operating points.
+9. Report point-level ROC-AUC/AP, precision, recall, F1, balanced accuracy and realized test false-positive rate.
+10. Report event-level recall and detection delay for NAB windows intersecting the test period.
+
+A validation alert budget is not a guaranteed future false-positive rate. Realized test FPR is measured separately because the stream can shift over time.
 
 ## Robustness and sensitivity
 
 - Isolation Forest seeds: 13, 29, 42, 73, 101.
-- Feature-history windows: 6, 12 and 24 observations.
+- History windows: 6, 12 and 24 observations.
 - Label-blind threshold calibration is the primary result.
-- A normal-only threshold is retained as an **oracle sensitivity analysis**, not as the unsupervised headline result.
-- Label-blind model fitting is compared with annotation-cleaned fitting to expose how much benchmark-label access changes the result.
-
-The four selected streams were checked before freezing the design; each has annotated anomaly points in the final 30% test segment.
+- A normal-only threshold is an oracle sensitivity analysis.
+- Label-blind fitting is compared with annotation-cleaned fitting to expose the effect of benchmark-label access.
 
 ## Run
 
-\`\`\`bash
+```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 PYTHONPATH=. pytest -q
 PYTHONPATH=. python src/run_experiment.py
-\`\`\`
+```
 
-A faster networked smoke run is available with:
+A faster networked smoke run is available with `--quick`.
 
-\`\`\`bash
-PYTHONPATH=. python src/run_experiment.py --quick
-\`\`\`
+The full study generates:
 
-The full experiment generates \`results/metrics.json\`, \`results/summary.md\`, per-series score figures under \`results/figures/\`, and \`paper/results.md\`.
+- `results/metrics.json`
+- `results/summary.md`
+- one score/alert figure per selected series under `results/figures/`
+- `paper/results.md`
+- `paper/results.tex`
 
-## Why this is a Research Bundle
+## Research-bundle boundary
 
-The repository now contains a real external benchmark, data hashing, chronological holdouts, multiple detector baselines, repeated stochastic runs, alert-budget sensitivity, label-access ablation, feature-window sensitivity, point and event metrics, false-alarm/missed-point counts, offline tests, CI, an empirical workflow, ethics/limitations, and a paper-facing scaffold.
+This repository uses NAB data and anomaly windows but **does not reproduce the official NAB scoring profile or leaderboard score**. Its reported ROC-AUC, AP, F1, false-alarm and event metrics are specific to this transparent protocol and must not be presented as official NAB scores.
 
-## Interpretation boundary
-
-NAB annotations are benchmark windows, not universal definitions of operational failure. Point-wise metrics can misrepresent a detector that alerts early or late within an event, so event-level metrics are also reported. Results on four streams do not establish production readiness or transfer to another monitoring environment.
+NAB annotations are benchmark windows, not universal definitions of failure. Results on four streams do not establish production readiness or transfer to another monitoring environment.
 
 ## Professor review path
 
-1. \`README.md\`
-2. \`DATA.md\`
-3. \`src/run_experiment.py\`
-4. \`results/summary.md\`
-5. \`results/metrics.json\`
-6. \`RESEARCH_BUNDLE.md\`
-7. \`REPRODUCIBILITY.md\`
-8. \`ETHICS.md\`
-9. \`paper/paper.md\`
-10. \`paper/results.md\`
+`README.md` → `DATA.md` → `src/run_experiment.py` → `results/summary.md` → `results/metrics.json` → `RESEARCH_BUNDLE.md` → `REPRODUCIBILITY.md` → `ETHICS.md` → `paper/paper.md`.

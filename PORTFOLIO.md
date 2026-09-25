@@ -1,7 +1,10 @@
 # Portfolio Positioning
 
 **Primary tag:** AI Engineering  
-**Artifact type:** Research Bundle  
-**Research theme:** streaming anomaly detection and operating-threshold calibration
+**Artifact type:** Empirical Research Bundle  
+**Research theme:** streaming anomaly detection, temporal evaluation, threshold policy, and reproducibility  
+**External data:** Numenta Anomaly Benchmark, frozen Git revision
 
-The repository demonstrates temporal evaluation discipline, real operational benchmark data, transparent causal feature construction, unsupervised fitting, threshold policy and responsible interpretation.
+This repository demonstrates research discipline needed for operational anomaly detection: byte-level external-data provenance, forward-only feature construction, chronological fit/validation/test separation, label-blind primary fitting and threshold calibration, an interpretable robust-history baseline, repeated stochastic runs, history-window sensitivity, label-access ablations, point and event metrics, generated figures, machine-readable evidence, and manuscript-ready outputs.
+
+Recommended review path: `README.md` → `DATA.md` → `src/run_experiment.py` → `results/summary.md` → `RESEARCH_BUNDLE.md` → `paper/paper.md`.

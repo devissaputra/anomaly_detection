@@ -1,3 +1,3 @@
-# Streaming Anomaly Detection Research Bundle
+# Label-Blind Threshold-Aware Anomaly Detection
 
-Real-data AI Engineering research bundle using selected Numenta Anomaly Benchmark operational time series. The study keeps model fitting, threshold calibration and final chronological evaluation separate and reports both ranking quality and explicit alert-budget operating points.
+Empirical AI Engineering research bundle using four real-world Numenta Anomaly Benchmark streams. It pins an exact NAB revision and source hashes, enforces strictly forward-only temporal features, separates label-blind fitting, alert-budget calibration and chronological evaluation, and reports ranking, operating-point, event, repeated-seed and sensitivity evidence.

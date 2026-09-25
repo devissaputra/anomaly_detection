@@ -42,7 +42,7 @@ EXPECTED_SERIES_SHA256 = {
     "realKnownCause/ec2_request_latency_system_failure.csv": "98378580aa80157e057c61d59d81daddccc6c65a2c0c800e3f01f603b8215c3f",
     "realKnownCause/machine_temperature_system_failure.csv": "92bf5b87fc7f9bba8ca0b7ec63ccaac8cb4a1371a258e8c29a10ae9c018d82a4",
 }
-FALSE_POSITIVE_BUDGETS = (0.05, 0.10, 0.15)
+ALERT_BUDGETS = (0.05, 0.10, 0.15)
 ROLLING_WINDOW = 12
 N_ESTIMATORS = 200
 
@@ -220,7 +220,7 @@ def score_isolation_forest(model, X: pd.DataFrame, idx) -> np.ndarray:
 def _operating_grid(y_test, test_scores, validation_scores, validation_labels, test_ts, windows):
     out = {"label_blind": {}, "oracle_normal_only": {}}
     normal_validation_scores = validation_scores[np.asarray(validation_labels) == 0]
-    for budget in FALSE_POSITIVE_BUDGETS:
+    for budget in ALERT_BUDGETS:
         key = f"{budget:.2f}"
         blind_threshold = threshold_from_scores(validation_scores, budget)
         oracle_threshold = threshold_from_scores(normal_validation_scores, budget)
@@ -463,7 +463,7 @@ def run_experiment(results_dir: str | Path = "results", quick: bool = False):
             "test_fraction": 0.30,
             "primary_training": "label-blind",
             "primary_threshold_calibration": "label-blind validation quantile",
-            "alert_budgets": list(FALSE_POSITIVE_BUDGETS),
+            "alert_budgets": list(ALERT_BUDGETS),
             "rolling_window": ROLLING_WINDOW,
             "isolation_forest_estimators": N_ESTIMATORS,
             "repeated_seeds": list(seeds),
