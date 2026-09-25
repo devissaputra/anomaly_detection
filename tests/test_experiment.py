@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import hashlib
 
 import numpy as np
@@ -6,6 +7,8 @@ import pandas as pd
 import pytest
 
 from src.run_experiment import (
+    NAB_REVISION,
+    EXPECTED_SERIES_SHA256,
     EXPECTED_WINDOWS_SHA256,
     causal_features,
     event_metrics,
@@ -96,3 +99,18 @@ def test_frozen_source_hash_guard():
     assert validate_source_hash("fixture", payload, expected) == expected
     with pytest.raises(ValueError, match="Unexpected SHA-256"):
         validate_source_hash("fixture", payload, EXPECTED_WINDOWS_SHA256)
+
+
+def test_committed_empirical_evidence_matches_frozen_sources():
+    root = Path(__file__).resolve().parents[1]
+    metrics = json.loads((root / "results" / "metrics.json").read_text(encoding="utf-8"))
+    assert metrics["research_bundle"] is True
+    assert metrics["status"] == "complete"
+    assert metrics["dataset"]["revision"] == NAB_REVISION
+    assert metrics["dataset"]["combined_windows_sha256"] == EXPECTED_WINDOWS_SHA256
+    assert metrics["dataset"]["series_sha256"] == EXPECTED_SERIES_SHA256
+    assert metrics["protocol"]["repeated_seeds"] == [13, 29, 42, 73, 101]
+    assert len(metrics["repeated_runs"]) == 5
+    generated_tex = (root / "paper" / "results.tex").read_text(encoding="utf-8")
+    assert NAB_REVISION in generated_tex
+    assert "Generated empirical results" in generated_tex
