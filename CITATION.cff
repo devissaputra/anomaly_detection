@@ -1,10 +1,16 @@
 cff-version: 1.2.0
-message: "If you use this repository, please cite the repository and the original dataset source."
-title: "Novelty / Anomaly Detection on Real Digits"
+message: "If you use this repository, please cite the repository and the original NAB source."
+title: "Label-Blind Streaming Anomaly Detection on the Numenta Anomaly Benchmark"
 type: software
 authors:
   - family-names: "Saputra"
     given-names: "Devis W."
-version: 1.0.0
+version: 2.0.0
 license: MIT
-repository-code: "https://github.com/devissaputra/REPLACE-WITH-REPOSITORY-NAME"
+repository-code: "https://github.com/devissaputra/anomaly_detection"
+keywords:
+  - anomaly detection
+  - streaming
+  - isolation forest
+  - Numenta Anomaly Benchmark
+  - reproducibility
