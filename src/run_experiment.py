@@ -368,9 +368,26 @@ def write_summary(results: dict, path: Path) -> None:
             f"{fmt(zr['roc_auc'])} | {fmt(zr['average_precision'])} | {fmt(op['f1'])} | {fmt(op['test_fpr'])} |"
         )
     lines += [
+        "", "## Frozen data identity", "",
+        f"- NAB revision: \`{results['dataset']['revision']}\`",
+        f"- annotation SHA-256: \`{results['dataset']['combined_windows_sha256']}\`", "",
+        "## Repeated-seed Isolation Forest robustness", "",
+        "Values are mean ± sample SD across seeds 13, 29, 42, 73 and 101 on the same chronological split.", "",
+        "| Series | ROC-AUC | AP | F1 @ 5% blind budget | Test FPR @ 5% |",
+        "|---|---:|---:|---:|---:|",
+    ]
+    fmt = lambda x: "NA" if x is None else f"{x:.4f}"
+    for series, metrics in results["repeated_summary"].items():
+        lines.append(
+            f"| {series} | {fmt(metrics['roc_auc']['mean'])} ± {fmt(metrics['roc_auc']['std'])} | "
+            f"{fmt(metrics['average_precision']['mean'])} ± {fmt(metrics['average_precision']['std'])} | "
+            f"{fmt(metrics['f1_at_0.05']['mean'])} ± {fmt(metrics['f1_at_0.05']['std'])} | "
+            f"{fmt(metrics['test_fpr_at_0.05']['mean'])} ± {fmt(metrics['test_fpr_at_0.05']['std'])} |"
+        )
+    lines += [
         "", "## Methodological guardrails", "",
         "The primary fit and validation threshold are label-blind. NAB labels are used only for evaluation. An annotation-cleaned fit and normal-only threshold are retained as oracle sensitivity analyses and are not presented as the primary unsupervised result.", "",
-        "Repeated Isolation Forest seeds quantify stochastic sensitivity. Window sizes 6, 12 and 24 quantify feature-window sensitivity. Point metrics are complemented by event detection and delay metrics at each operating point.", "",
+        "The validation percentages are alert budgets, not guaranteed future false-positive rates. Repeated Isolation Forest seeds quantify stochastic sensitivity on the same data and are not independent replications. Window sizes 6, 12 and 24 quantify feature-window sensitivity. Point metrics are complemented by event detection and delay metrics.", "",
     ]
     path.write_text("\n".join(lines), encoding="utf-8")
 
