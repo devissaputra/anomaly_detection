@@ -1,3 +1,7 @@
+# Calculation reading guide: ../CALCULATIONS.md (repository root).
+# Threshold = quantile(validation scores, 1 - budget); FPR = FP / (FP + TN).
+# A validation alert budget is the fraction of validation scores above a quantile, not the probability of a false alarm. Event recall and first-alert delay complement point-level metrics. These are not official NAB leaderboard scores.
+
 from __future__ import annotations
 
 import argparse

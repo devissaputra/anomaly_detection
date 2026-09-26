@@ -1,0 +1,66 @@
+{
+  "question": "When do label-blind detectors produce useful alerts?",
+  "data": "Four realKnownCause NAB streams; pinned data and annotation hashes.",
+  "method": "Fit on first 50%; calibrate on next 20%; evaluate on final 30%. Compare Isolation Forest with prior-history median/MAD deviations.",
+  "formula": "Threshold = quantile(validation scores, 1 - budget); FPR = FP / (FP + TN).",
+  "interpretation": "A validation alert budget is the fraction of validation scores above a quantile, not the probability of a false alarm. Event recall and first-alert delay complement point-level metrics. These are not official NAB leaderboard scores.",
+  "status": "RECORDED EXTERNAL-DATA STUDY | full experiment not rerun in this review",
+  "source": "results/metrics.json",
+  "rows": [
+    {
+      "label": "ambient_temperature",
+      "path": [
+        "primary",
+        "realKnownCause/ambient_temperature_system_failure.csv",
+        "isolation_forest",
+        "operating_points",
+        "label_blind",
+        "0.05",
+        "test_fpr"
+      ],
+      "unit": "test FPR @ 5% budget"
+    },
+    {
+      "label": "cpu_utilization",
+      "path": [
+        "primary",
+        "realKnownCause/cpu_utilization_asg_misconfiguration.csv",
+        "isolation_forest",
+        "operating_points",
+        "label_blind",
+        "0.05",
+        "test_fpr"
+      ],
+      "unit": "test FPR @ 5% budget"
+    },
+    {
+      "label": "request latency",
+      "path": [
+        "primary",
+        "realKnownCause/ec2_request_latency_system_failure.csv",
+        "isolation_forest",
+        "operating_points",
+        "label_blind",
+        "0.05",
+        "test_fpr"
+      ],
+      "unit": "test FPR @ 5% budget"
+    },
+    {
+      "label": "machine_temperature",
+      "path": [
+        "primary",
+        "realKnownCause/machine_temperature_system_failure.csv",
+        "isolation_forest",
+        "operating_points",
+        "label_blind",
+        "0.05",
+        "test_fpr"
+      ],
+      "unit": "test FPR @ 5% budget"
+    }
+  ],
+  "table_title": "Selected recorded values (units and context shown)",
+  "evidence_note": "Selected committed results; source values were not independently retrained in this review.",
+  "finding": "At the 5% validation alert budget, the primary Isolation Forest test false-positive rate ranges from 0.0300 to 0.2338 across the four streams. This variation is central to the finding: a fixed calibration budget does not guarantee a stable operating point after temporal change. Repeated seeds and history-window checks describe robustness on these streams, not independent replications."
+}

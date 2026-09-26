@@ -1,5 +1,24 @@
 # Label-Blind Threshold-Aware Anomaly Detection on NAB
 
+This study compares feature-based Isolation Forest with a transparent robust-history baseline on four real NAB streams. The primary pipeline stays label-blind during fitting and alert-budget calibration, then evaluates event detection separately so threshold tuning does not quietly leak benchmark labels into the detector.
+
+At the 5% validation alert budget, the primary Isolation Forest test false-positive rate ranges from 0.0300 to 0.2338 across the four streams. This variation is central to the finding: a fixed calibration budget does not guarantee a stable operating point after temporal change. Repeated seeds and history-window checks describe robustness on these streams, not independent replications.
+
+## Start here
+
+- [Calculations, evidence and verification scope](CALCULATIONS.md)
+- [Figure sources and exact numerical paths](docs/figure_spec.json)
+- [Working paper](paper/paper.md)
+- [Data and provenance](DATA.md)
+
+![Study question, data, design and interpretation](assets/review_overview.svg)
+
+![Defined calculation and source-linked evidence](assets/review_calculations.svg)
+
+**Review scope:** The existing suite requires unavailable dependencies; no full-suite pass is claimed. The complete data/model experiment was not rerun in this review. Stored empirical results were inspected, not independently reproduced from raw data.
+
+## Detailed project documentation
+
 [![CI](https://github.com/devissaputra/anomaly_detection/actions/workflows/ci.yml/badge.svg)](https://github.com/devissaputra/anomaly_detection/actions/workflows/ci.yml)
 [![Empirical Study](https://github.com/devissaputra/anomaly_detection/actions/workflows/empirical.yml/badge.svg)](https://github.com/devissaputra/anomaly_detection/actions/workflows/empirical.yml)
 

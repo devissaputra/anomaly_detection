@@ -58,3 +58,33 @@ The executable protocol is `src/run_experiment.py`; full machine-readable eviden
 
 - Ahmad, S., Lavin, A., Purdy, S., & Agha, Z. (2017). Unsupervised real-time anomaly detection for streaming data. *Neurocomputing*, 262, 134–147. DOI: 10.1016/j.neucom.2017.04.070.
 - Liu, F. T., Ting, K. M., & Zhou, Z.-H. (2008). Isolation Forest. *2008 Eighth IEEE International Conference on Data Mining*, 413–422. DOI: 10.1109/ICDM.2008.17.
+
+
+## Calculation definitions and evidence audit
+
+Threshold = quantile(validation scores, 1 - budget); FPR = FP / (FP + TN).
+
+A validation alert budget is the fraction of validation scores above a quantile, not the probability of a false alarm. Event recall and first-alert delay complement point-level metrics. These are not official NAB leaderboard scores.
+
+At the 5% validation alert budget, the primary Isolation Forest test false-positive rate ranges from 0.0300 to 0.2338 across the four streams. This variation is central to the finding: a fixed calibration budget does not guarantee a stable operating point after temporal change. Repeated seeds and history-window checks describe robustness on these streams, not independent replications.
+
+The [calculation guide](../CALCULATIONS.md) provides exact evidence paths and a function-level implementation map.
+
+![Study design](../assets/review_overview.svg)
+
+![Calculation and selected evidence](../assets/review_calculations.svg)
+
+### Selected evidence and interpretation
+
+| Quantity | Value | Unit / meaning | JSON path |
+|---|---:|---|---|
+| ambient_temperature | 0.23377337733773376 | test FPR @ 5% budget | `primary.realKnownCause/ambient_temperature_system_failure.csv.isolation_forest.operating_points.label_blind.0.05.test_fpr` |
+| cpu_utilization | 0.10699693564862105 | test FPR @ 5% budget | `primary.realKnownCause/cpu_utilization_asg_misconfiguration.csv.isolation_forest.operating_points.label_blind.0.05.test_fpr` |
+| request latency | 0.03003003003003003 | test FPR @ 5% budget | `primary.realKnownCause/ec2_request_latency_system_failure.csv.isolation_forest.operating_points.label_blind.0.05.test_fpr` |
+| machine_temperature | 0.09480176211453745 | test FPR @ 5% budget | `primary.realKnownCause/machine_temperature_system_failure.csv.isolation_forest.operating_points.label_blind.0.05.test_fpr` |
+
+These values are read from `results/metrics.json`. They must be interpreted with the split, data status and limitations above. The complete data/model experiment was not rerun in this review. Stored empirical results were inspected, not independently reproduced from raw data.
+
+### Reproduction and claim boundaries
+
+The existing suite requires unavailable dependencies; no full-suite pass is claimed. The figure generator can be checked with `python scripts/build_review_figures.py --check`. This verifies the displayed calculation evidence, not an independent replication of the complete scientific experiment. The manuscript is a working report, not a peer-reviewed publication.

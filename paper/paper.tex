@@ -50,4 +50,10 @@ The executable protocol is \texttt{src/run\_experiment.py}. The exact upstream r
 
 \bibliographystyle{plain}
 \bibliography{references}
+\section{Calculation audit and reproduction scope}
+At the 5\% validation alert budget, the primary Isolation Forest test false-positive rate ranges from 0.0300 to 0.2338 across the four streams. This variation is central to the finding: a fixed calibration budget does not guarantee a stable operating point after temporal change. Repeated seeds and history-window checks describe robustness on these streams, not independent replications.
+
+A validation alert budget is the fraction of validation scores above a quantile, not the probability of a false alarm. Event recall and first-alert delay complement point-level metrics. These are not official NAB leaderboard scores.
+
+See the repository calculation guide for exact source paths. The full experiment was not independently rerun during this documentation review.
 \end{document}
